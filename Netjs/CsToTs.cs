@@ -90,9 +90,10 @@ namespace Netjs
 			yield return new RemoveGenericArgsInIsExpr ();
 			yield return new RemoveAttributes ();
 			yield return new RemoveModifiers ();
+			yield return new RemoveCasts ();
 			yield return new RemoveEmptySwitch ();
 			yield return new MakeWhileLoop ();
-			yield return new GotoRemoval ();
+			//yield return new GotoRemoval ();	
 			yield return new OrderClasses ();
 			yield return new CallStaticCtors ();
 			yield return new AddReferences ();
@@ -269,6 +270,26 @@ namespace Netjs
 			if (ind != null) {
 				var pind = p as IndexerExpression;
 				return pind != null && NodeCollectionsEqual (ind.Arguments, pind.Arguments);
+			}
+
+			// ignore casts
+			var cst = Variable as CastExpression;
+			if (cst != null) {
+				var pcst = p as CastExpression;
+				if (pcst != null) {
+					return NodesEqual (cst.Expression, pcst.Expression);
+				}
+				return NodesEqual(cst.Expression, p);
+			}
+
+
+			var vpri = Variable as PrimitiveExpression;
+			if (vpri != null) {
+				var ppri = p as PrimitiveExpression;
+				if (ppri != null) {
+					return vpri.LiteralValue == ppri.LiteralValue;
+				}
+				return false;
 			}
 
 			throw new NotImplementedException (Variable + " (" + Variable.GetType () + ") == " + p);
@@ -2536,6 +2557,22 @@ namespace Netjs
 				if (typeDeclaration.ClassType == ClassType.Struct) {
 					typeDeclaration.ClassType = ClassType.Class;
 				}
+			}
+
+			// TODO: Introduce Clone
+		}
+
+		class RemoveCasts : DepthFirstAstVisitor, IAstTransform
+		{
+			public void Run (AstNode compilationUnit)
+			{
+				compilationUnit.AcceptVisitor (this);
+			}
+
+			public override void VisitCastExpression (CastExpression castExpression)
+			{
+				base.VisitCastExpression (castExpression);
+				castExpression.ReplaceWith (castExpression.Expression);
 			}
 
 			// TODO: Introduce Clone

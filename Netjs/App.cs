@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.Ast;
 using Mono.Cecil;
@@ -57,7 +58,7 @@ namespace Netjs
 						break;
 					case "--outjs":
 					case "-j" when i + 1 < args.Length:
-						config.OutputJsPath = args[i+1];
+						config.OutputJsPath = args[i + 1];
 						i++;
 						break;
 					default:
@@ -72,8 +73,14 @@ namespace Netjs
 				}
 			}
 			try {
-				return new App ().Run (config);
-			} catch (Exception ex) {
+				Thread T = new Thread (new ThreadStart (() => {
+					new App ().Run (config);
+				}), 4096 * 1024);
+				T.Start ();
+				T.Join ();
+				return 0;
+			}
+			catch (Exception ex) {
 				Error ("{0}", ex);
 				return 1;
 			}
@@ -128,8 +135,8 @@ namespace Netjs
 			globalReaderParameters.ReadingMode = ReadingMode.Immediate;
 
 			var libDir = Path.GetDirectoryName (typeof (String).Assembly.Location);
-			asmSearchPaths.Add (Tuple.Create(libDir, false));
-			asmSearchPaths.Add (Tuple.Create(Path.Combine (libDir, "Facades"), false));
+			asmSearchPaths.Add (Tuple.Create (libDir, false));
+			asmSearchPaths.Add (Tuple.Create (Path.Combine (libDir, "Facades"), false));
 
 			AssemblyDefinition firstAsm = null;
 			foreach (var asmPath in asmPaths) {
@@ -156,7 +163,7 @@ namespace Netjs
 			context.Settings.YieldReturn = false;
 			var builder = new AstBuilder (context);
 			var decompiled = new HashSet<string> ();
-			for (;;) {
+			for (; ; ) {
 				var a = decompileAssemblies.FirstOrDefault (x => !decompiled.Contains (x.FullName));
 				if (a != null) {
 					Info ("  Decompiling {0}", a.FullName);
@@ -246,8 +253,8 @@ namespace Netjs
 
 		#region IAssemblyResolver implementation
 
-		public void Dispose () {}
-		
+		public void Dispose () { }
+
 		readonly ReaderParameters globalReaderParameters = new ReaderParameters ();
 		readonly List<Tuple<string, bool>> asmSearchPaths = new List<Tuple<string, bool>> ();
 		readonly Dictionary<string, AssemblyDefinition> referencedAssemblies = new Dictionary<string, AssemblyDefinition> ();

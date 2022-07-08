@@ -226,6 +226,25 @@ namespace Netjs
 			}
 		}
 
+		void WriteAsteriskSeparatedList (IEnumerable<AstNode> list, Action<AstNode> ext = null)
+		{
+			bool isFirst = true;
+			foreach (AstNode node in list) {
+				if (isFirst) {
+					isFirst = false;
+				}
+				else {
+					//Comma (node);
+					formatter.Space ();
+					formatter.WriteToken (BinaryOperatorExpression.MultiplyRole.ToString ());
+					formatter.Space ();
+				}
+				node.AcceptVisitor (this);
+				if (ext != null)
+					ext (node);
+			}
+		}
+
 		void WriteCommaSeparatedListInParenthesis(IEnumerable<AstNode> list, bool spaceWithin, Action<AstNode> ext = null)
 		{
 			LPar();
@@ -492,7 +511,9 @@ namespace Netjs
 		void WriteModifiers(IEnumerable<CSharpModifierToken> modifierTokens)
 		{
 			foreach (CSharpModifierToken modifier in modifierTokens) {
-				modifier.AcceptVisitor(this);
+				if(modifier.Modifier != Modifiers.New) {
+					modifier.AcceptVisitor (this);
+				}
 			}
 		}
 
@@ -613,7 +634,7 @@ namespace Netjs
 				arrayCreateExpression.Type.AcceptVisitor(this);
 				WriteToken (Roles.RChevron);
 				LPar ();
-				WriteCommaSeparatedList(arrayCreateExpression.Arguments);
+				WriteAsteriskSeparatedList(arrayCreateExpression.Arguments);
 				RPar ();
 			}
 //			foreach (var specifier in arrayCreateExpression.AdditionalArraySpecifiers) {
@@ -2155,7 +2176,8 @@ namespace Netjs
 			StartNode(destructorDeclaration);
 			WriteAttributes(destructorDeclaration.Attributes);
 			WriteModifiers(destructorDeclaration.ModifierTokens);
-			WriteToken(DestructorDeclaration.TildeRole);
+			//WriteToken(DestructorDeclaration.TildeRole);
+			formatter.WriteToken ("_");
 			TypeDeclaration type = destructorDeclaration.Parent as TypeDeclaration;
 			StartNode(destructorDeclaration.NameToken);
 			WriteIdentifier(type != null ? type.Name : destructorDeclaration.Name);
@@ -2473,11 +2495,11 @@ namespace Netjs
 		{
 			StartNode(arraySpecifier);
 			WriteToken(Roles.LBracket);
-			foreach (var comma in arraySpecifier.GetChildrenByRole(Roles.Comma)) {
-				WriteSpecialsUpToNode(comma);
-				formatter.WriteToken(",");
-				lastWritten = LastWritten.Other;
-			}
+			//foreach (var comma in arraySpecifier.GetChildrenByRole(Roles.Comma)) {
+			//	WriteSpecialsUpToNode(comma);
+			//	formatter.WriteToken(",");
+			//	lastWritten = LastWritten.Other;
+			//}
 			WriteToken(Roles.RBracket);
 			EndNode(arraySpecifier);
 		}
